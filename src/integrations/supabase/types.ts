@@ -14,16 +14,432 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      advertisers: {
+        Row: {
+          budget_range: string | null
+          company_name: string | null
+          created_at: string | null
+          id: string
+          location: string | null
+          product_service: string | null
+          updated_at: string | null
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          budget_range?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          product_service?: string | null
+          updated_at?: string | null
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          budget_range?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          product_service?: string | null
+          updated_at?: string | null
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      applications: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          id: string
+          influencer_id: string
+          message: string | null
+          status: Database["public"]["Enums"]["application_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          id?: string
+          influencer_id: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["application_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          id?: string
+          influencer_id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["application_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          advertiser_id: string
+          budget: number
+          created_at: string | null
+          deadline: string
+          description: string | null
+          escrow_address: string | null
+          escrow_tx_hash: string | null
+          id: string
+          niche: string[] | null
+          requirements: string | null
+          status: Database["public"]["Enums"]["campaign_status"] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          advertiser_id: string
+          budget: number
+          created_at?: string | null
+          deadline: string
+          description?: string | null
+          escrow_address?: string | null
+          escrow_tx_hash?: string | null
+          id?: string
+          niche?: string[] | null
+          requirements?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          advertiser_id?: string
+          budget?: number
+          created_at?: string | null
+          deadline?: string
+          description?: string | null
+          escrow_address?: string | null
+          escrow_tx_hash?: string | null
+          id?: string
+          niche?: string[] | null
+          requirements?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "advertisers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escrow: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          campaign_id: string
+          contract_address: string | null
+          created_at: string | null
+          deliverable_url: string | null
+          deposit_tx_hash: string | null
+          id: string
+          release_tx_hash: string | null
+          status: Database["public"]["Enums"]["escrow_status"] | null
+          submitted_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          campaign_id: string
+          contract_address?: string | null
+          created_at?: string | null
+          deliverable_url?: string | null
+          deposit_tx_hash?: string | null
+          id?: string
+          release_tx_hash?: string | null
+          status?: Database["public"]["Enums"]["escrow_status"] | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          campaign_id?: string
+          contract_address?: string | null
+          created_at?: string | null
+          deliverable_url?: string | null
+          deposit_tx_hash?: string | null
+          id?: string
+          release_tx_hash?: string | null
+          status?: Database["public"]["Enums"]["escrow_status"] | null
+          submitted_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escrow_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      influencers: {
+        Row: {
+          bio: string | null
+          country: string | null
+          created_at: string | null
+          engagement_rate: number | null
+          followers: number | null
+          id: string
+          niche: string[] | null
+          platforms: string[] | null
+          portfolio_url: string | null
+          price_per_post: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          country?: string | null
+          created_at?: string | null
+          engagement_rate?: number | null
+          followers?: number | null
+          id?: string
+          niche?: string[] | null
+          platforms?: string[] | null
+          portfolio_url?: string | null
+          price_per_post?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          country?: string | null
+          created_at?: string | null
+          engagement_rate?: number | null
+          followers?: number | null
+          id?: string
+          niche?: string[] | null
+          platforms?: string[] | null
+          portfolio_url?: string | null
+          price_per_post?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "influencers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          campaign_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          campaign_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          campaign_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          read?: boolean | null
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string | null
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string | null
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string | null
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string | null
+          updated_at: string | null
+          verified: boolean | null
+          wallet_address: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name?: string | null
+          updated_at?: string | null
+          verified?: boolean | null
+          wallet_address?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string | null
+          updated_at?: string | null
+          verified?: boolean | null
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "advertiser" | "influencer" | "admin"
+      application_status: "applied" | "accepted" | "rejected"
+      campaign_status:
+        | "open"
+        | "in_progress"
+        | "delivered"
+        | "approved"
+        | "disputed"
+        | "cancelled"
+      escrow_status: "pending" | "locked" | "released" | "refunded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +566,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["advertiser", "influencer", "admin"],
+      application_status: ["applied", "accepted", "rejected"],
+      campaign_status: [
+        "open",
+        "in_progress",
+        "delivered",
+        "approved",
+        "disputed",
+        "cancelled",
+      ],
+      escrow_status: ["pending", "locked", "released", "refunded"],
+    },
   },
 } as const
