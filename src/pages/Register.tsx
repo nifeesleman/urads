@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
-import { Wallet, Loader2, AlertCircle, User, Building2, Sparkles, ArrowRight } from "lucide-react";
+import { Wallet, Loader2, AlertCircle, User, Building2, Sparkles, ArrowRight, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Register = () => {
@@ -13,8 +13,8 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const defaultRole = (searchParams.get("role") as UserRole) || "influencer";
 
-  const { connect, isConnected, isConnecting, address, error: web3Error } = useWeb3();
-  const { signUp, user, role: userRole, isLoading, error: authError } = useAuth();
+  const { connect, disconnect, isConnected, isConnecting, address, error: web3Error, clearError: clearWeb3Error } = useWeb3();
+  const { signUp, user, role: userRole, isLoading, error: authError, clearError: clearAuthError } = useAuth();
 
   const [role, setRole] = useState<UserRole>(defaultRole);
   const [name, setName] = useState("");
@@ -34,7 +34,15 @@ const Register = () => {
   }, [user, userRole, isConnected, navigate]);
 
   const handleConnectWallet = async () => {
+    clearWeb3Error();
+    clearAuthError();
     await connect();
+  };
+
+  const handleDisconnectWallet = () => {
+    clearWeb3Error();
+    clearAuthError();
+    disconnect();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,6 +50,7 @@ const Register = () => {
     if (!name.trim()) return;
 
     setIsSubmitting(true);
+    clearAuthError();
     try {
       await signUp(role, name.trim(), email.trim() || undefined);
     } finally {
@@ -152,16 +161,28 @@ const Register = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Connected Wallet Display */}
               <div className="p-4 rounded-lg border border-primary/50 bg-primary/5 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-primary" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Wallet className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Wallet Connected</p>
+                      <p className="font-mono font-medium text-foreground">
+                        {address?.slice(0, 6)}...{address?.slice(-4)}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Wallet Connected</p>
-                    <p className="font-mono font-medium text-foreground">
-                      {address?.slice(0, 6)}...{address?.slice(-4)}
-                    </p>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleDisconnectWallet}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    title="Disconnect wallet"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
 

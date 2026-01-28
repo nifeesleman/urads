@@ -2,14 +2,13 @@
  * Authentication Context
  * 
  * Combines wallet-based authentication with Supabase for data persistence
- * Manages user roles and profile data
+ * Uses wallet address as the primary identifier (no password required)
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useWeb3 } from "./Web3Context";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // =============================================================
 //                           TYPES
@@ -63,32 +62,38 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const { address, isConnected, connect, disconnect } = useWeb3();
+  const { address, isConnected, disconnect } = useWeb3();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   const isAuthenticated = !!user && isConnected;
 
   const clearError = useCallback(() => setError(null), []);
 
   /**
-   * Fetch user profile and role from database
+   * Fetch user profile and role from database by wallet address
    */
-  const fetchUserData = useCallback(async (walletAddress: string) => {
+  const fetchUserData = useCallback(async (walletAddress: string): Promise<boolean> => {
     try {
-      // First check if user exists in profiles
+      console.log("Fetching user data for wallet:", walletAddress);
+      
+      // Check if user exists in profiles
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("wallet_address", walletAddress)
+        .eq("wallet_address", walletAddress.toLowerCase())
         .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+        throw profileError;
+      }
 
       if (profile) {
+        console.log("Found profile:", profile.id);
         setUser(profile as UserProfile);
         
         // Fetch role
@@ -98,25 +103,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .eq("user_id", profile.id)
           .maybeSingle();
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error("Role fetch error:", roleError);
+          throw roleError;
+        }
+        
         if (roleData) {
+          console.log("Found role:", roleData.role);
           setRole(roleData.role as UserRole);
         }
+        return true;
       } else {
-        // User not registered yet
+        console.log("No profile found for wallet");
         setUser(null);
         setRole(null);
+        return false;
       }
     } catch (err: any) {
       console.error("Error fetching user data:", err);
       setError(err.message);
-    } finally {
-      setIsLoading(false);
+      return false;
     }
   }, []);
 
   /**
    * Sign up with wallet - creates user in Supabase
+   * Uses anonymous sign up since we're using wallet as the primary auth method
    */
   const signUp = useCallback(async (selectedRole: UserRole, name: string, email?: string) => {
     if (!address) {
@@ -128,37 +140,63 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
-      // Generate a unique email for auth based on wallet address
-      const authEmail = `${address.toLowerCase()}@wallet.urads.io`;
-      const authPassword = `wallet_${address.toLowerCase()}_${Date.now()}`;
+      const walletLower = address.toLowerCase();
+      
+      // Check if user already exists
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("wallet_address", walletLower)
+        .maybeSingle();
 
-      // Sign up with Supabase Auth
+      if (existingProfile) {
+        setError("An account with this wallet already exists. Please sign in instead.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Sign up anonymously first to get a user ID
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: authEmail,
-        password: authPassword,
+        email: `${walletLower}@wallet.urads.io`,
+        password: `wallet_${walletLower}_${Date.now()}_${Math.random().toString(36)}`,
         options: {
           emailRedirectTo: window.location.origin,
           data: {
-            wallet_address: address,
+            wallet_address: walletLower,
             name: name,
           }
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Failed to create user");
+      if (authError) {
+        console.error("Auth signup error:", authError);
+        throw authError;
+      }
+      
+      if (!authData.user) {
+        throw new Error("Failed to create user account");
+      }
+
+      console.log("Auth user created:", authData.user.id);
 
       // Create profile
       const { error: profileError } = await supabase
         .from("profiles")
         .insert({
           id: authData.user.id,
-          wallet_address: address,
+          wallet_address: walletLower,
           name: name,
           email: email || null,
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile insert error:", profileError);
+        // If profile already exists, it might be a race condition
+        if (profileError.code === "23505") {
+          throw new Error("An account with this wallet already exists");
+        }
+        throw profileError;
+      }
 
       // Create role
       const { error: roleError } = await supabase
@@ -168,7 +206,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           role: selectedRole,
         });
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error("Role insert error:", roleError);
+        throw roleError;
+      }
 
       // Create advertiser or influencer profile
       if (selectedRole === "advertiser") {
@@ -177,20 +218,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .insert({
             user_id: authData.user.id,
           });
-        if (advError) throw advError;
+        if (advError) {
+          console.error("Advertiser insert error:", advError);
+          throw advError;
+        }
       } else if (selectedRole === "influencer") {
         const { error: infError } = await supabase
           .from("influencers")
           .insert({
             user_id: authData.user.id,
           });
-        if (infError) throw infError;
+        if (infError) {
+          console.error("Influencer insert error:", infError);
+          throw infError;
+        }
       }
 
       // Update local state
       setUser({
         id: authData.user.id,
-        wallet_address: address,
+        wallet_address: walletLower,
         name: name,
         email: email || null,
         avatar_url: null,
@@ -200,29 +247,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
       setRole(selectedRole);
 
-      toast({
-        title: "Account created!",
-        description: `Welcome to UrAds, ${name}!`,
-      });
+      toast.success(`Welcome to UrAds, ${name}!`);
     } catch (err: any) {
       console.error("Sign up error:", err);
       setError(err.message);
-      toast({
-        title: "Sign up failed",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast.error(err.message || "Sign up failed");
     } finally {
       setIsLoading(false);
     }
-  }, [address, toast]);
+  }, [address]);
 
   /**
-   * Sign in with wallet - authenticates existing user
+   * Sign in with wallet - finds existing user by wallet address
+   * No password needed - wallet ownership is the authentication
    */
   const signIn = useCallback(async () => {
     if (!address) {
-      await connect();
+      setError("Please connect your wallet first");
       return;
     }
 
@@ -230,83 +271,87 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
-      // Check if user exists
+      const walletLower = address.toLowerCase();
+      
+      // Check if user exists by wallet address
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("wallet_address", address)
+        .eq("wallet_address", walletLower)
         .maybeSingle();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile lookup error:", profileError);
+        throw profileError;
+      }
 
       if (!profile) {
-        setError("Account not found. Please sign up first.");
+        setError("No account found for this wallet. Please sign up first.");
         setIsLoading(false);
         return;
       }
 
-      // Sign in with Supabase Auth
-      const authEmail = `${address.toLowerCase()}@wallet.urads.io`;
-      
-      // For wallet-based auth, we use a session trick
-      // First try to sign in, if fails, we just use the profile directly
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password: `wallet_${address.toLowerCase()}_dummy`, // This will fail, but that's OK
-      });
+      console.log("Found user profile:", profile.id);
 
-      // Even if auth fails, if we have a profile, we can use it
-      // In production, you'd use a proper wallet signature verification
-      
+      // Set user state
       setUser(profile as UserProfile);
 
       // Fetch role
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", profile.id)
         .maybeSingle();
 
-      if (roleData) {
-        setRole(roleData.role as UserRole);
+      if (roleError) {
+        console.error("Role lookup error:", roleError);
+        throw roleError;
       }
 
-      toast({
-        title: "Welcome back!",
-        description: `Signed in as ${profile.name || address.slice(0, 8)}...`,
-      });
+      if (roleData) {
+        setRole(roleData.role as UserRole);
+      } else {
+        console.warn("No role found for user");
+      }
+
+      toast.success(`Welcome back, ${profile.name || walletLower.slice(0, 8)}...!`);
     } catch (err: any) {
       console.error("Sign in error:", err);
       setError(err.message);
+      toast.error(err.message || "Sign in failed");
     } finally {
       setIsLoading(false);
     }
-  }, [address, connect, toast]);
+  }, [address]);
 
   /**
-   * Sign out
+   * Sign out - clears all auth state and disconnects wallet
    */
   const signOut = useCallback(async () => {
     try {
+      // Sign out from Supabase if there's a session
       await supabase.auth.signOut();
-      disconnect();
-      setUser(null);
-      setRole(null);
-      toast({
-        title: "Signed out",
-        description: "See you soon!",
-      });
-    } catch (err: any) {
-      console.error("Sign out error:", err);
-      setError(err.message);
+    } catch (err) {
+      console.warn("Supabase signout error (non-critical):", err);
     }
-  }, [disconnect, toast]);
+    
+    // Always clear local state and disconnect wallet
+    setUser(null);
+    setRole(null);
+    setError(null);
+    disconnect();
+    
+    toast.success("Signed out successfully");
+  }, [disconnect]);
 
   /**
    * Update user profile
    */
   const updateProfile = useCallback(async (data: Partial<UserProfile>) => {
-    if (!user) return;
+    if (!user) {
+      setError("No user logged in");
+      return;
+    }
 
     try {
       const { error } = await supabase
@@ -317,49 +362,46 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error) throw error;
 
       setUser({ ...user, ...data });
-      toast({
-        title: "Profile updated",
-        description: "Your changes have been saved.",
-      });
+      toast.success("Profile updated");
     } catch (err: any) {
       console.error("Update profile error:", err);
       setError(err.message);
-      toast({
-        title: "Update failed",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast.error(err.message || "Failed to update profile");
     }
-  }, [user, toast]);
+  }, [user]);
 
   /**
    * Watch for wallet connection changes
    */
   useEffect(() => {
-    if (address && !user) {
-      fetchUserData(address);
+    if (address && !user && !hasCheckedAuth) {
+      setIsLoading(true);
+      setHasCheckedAuth(true);
+      fetchUserData(address).finally(() => {
+        setIsLoading(false);
+      });
     } else if (!address) {
+      // Wallet disconnected
       setUser(null);
       setRole(null);
+      setHasCheckedAuth(false);
       setIsLoading(false);
     }
-  }, [address, fetchUserData, user]);
+  }, [address, user, hasCheckedAuth, fetchUserData]);
 
   /**
-   * Listen for auth state changes
+   * Initial loading state
    */
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          setRole(null);
-        }
+    // Set initial loading to false after a short delay if no wallet
+    const timer = setTimeout(() => {
+      if (!address) {
+        setIsLoading(false);
       }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [address]);
 
   const value: AuthContextType = {
     user,
