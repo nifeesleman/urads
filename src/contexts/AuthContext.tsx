@@ -155,10 +155,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      // Sign up anonymously first to get a user ID
+      // Sign up with a short generated password (wallet is the real auth)
+      // Password must be under 72 chars - use hash of wallet + timestamp
+      const shortPassword = `w${walletLower.slice(2, 10)}${Date.now().toString(36)}`;
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: `${walletLower}@wallet.urads.io`,
-        password: `wallet_${walletLower}_${Date.now()}_${Math.random().toString(36)}`,
+        password: shortPassword,
         options: {
           emailRedirectTo: window.location.origin,
           data: {
