@@ -3,14 +3,14 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wallet, Loader2, AlertCircle, ArrowRight } from "lucide-react";
+import { Wallet, Loader2, AlertCircle, ArrowRight, X } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { connect, isConnected, isConnecting, address, error: web3Error } = useWeb3();
-  const { signIn, user, role, isLoading, error: authError } = useAuth();
+  const { connect, disconnect, isConnected, isConnecting, address, error: web3Error, clearError: clearWeb3Error } = useWeb3();
+  const { signIn, user, role, isLoading, error: authError, clearError: clearAuthError } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   const from = (location.state as any)?.from?.pathname || "/";
@@ -30,11 +30,20 @@ const Login = () => {
   }, [user, role, isConnected, navigate, from]);
 
   const handleConnectWallet = async () => {
+    clearWeb3Error();
+    clearAuthError();
     await connect();
+  };
+
+  const handleDisconnectWallet = () => {
+    clearWeb3Error();
+    clearAuthError();
+    disconnect();
   };
 
   const handleSignIn = async () => {
     setIsSigningIn(true);
+    clearAuthError();
     try {
       await signIn();
     } finally {
@@ -100,16 +109,27 @@ const Login = () => {
               <div className="space-y-4">
                 {/* Connected Wallet Display */}
                 <div className="p-4 rounded-lg border border-border bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Wallet className="w-5 h-5 text-primary" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Wallet className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Connected Wallet</p>
+                        <p className="font-mono font-medium text-foreground">
+                          {address?.slice(0, 6)}...{address?.slice(-4)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Connected Wallet</p>
-                      <p className="font-mono font-medium text-foreground">
-                        {address?.slice(0, 6)}...{address?.slice(-4)}
-                      </p>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDisconnectWallet}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      title="Disconnect wallet"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 

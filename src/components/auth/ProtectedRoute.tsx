@@ -22,10 +22,10 @@ export function ProtectedRoute({
   requireAuth = true,
 }: ProtectedRouteProps) {
   const location = useLocation();
-  const { user, role, isLoading } = useAuth();
+  const { user, role, isLoading, isAuthenticated } = useAuth();
   const { isConnected, isConnecting } = useWeb3();
 
-  // Show loading state
+  // Show loading state only during initial loading
   if (isLoading || isConnecting) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -37,8 +37,8 @@ export function ProtectedRoute({
     );
   }
 
-  // Check authentication
-  if (requireAuth && (!isConnected || !user)) {
+  // Check authentication - must be connected AND have a user profile
+  if (requireAuth && !isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -54,6 +54,11 @@ export function ProtectedRoute({
           : "/admin";
       return <Navigate to={dashboardRoute} replace />;
     }
+  }
+
+  // If role required but no role found, redirect to login
+  if (requiredRole && !role) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

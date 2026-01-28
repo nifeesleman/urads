@@ -66,18 +66,34 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   }, []);
 
   /**
+   * Reset all wallet state
+   */
+  const resetState = useCallback(() => {
+    setAddress(null);
+    setChainId(null);
+    setProvider(null);
+    setSigner(null);
+    localStorage.removeItem("walletConnected");
+  }, []);
+
+  /**
    * Handle account changes from wallet
    */
   const handleAccountsChanged = useCallback((accounts: string[]) => {
     if (accounts.length === 0) {
-      // User disconnected
-      setAddress(null);
-      setSigner(null);
-      setProvider(null);
-    } else {
+      // User disconnected from wallet
+      resetState();
+    } else if (accounts[0] !== address) {
+      // Account switched - update state
       setAddress(accounts[0]);
+      // Re-create signer for new account
+      if (window.ethereum) {
+        const browserProvider = new BrowserProvider(window.ethereum);
+        setProvider(browserProvider);
+        browserProvider.getSigner().then(setSigner).catch(console.error);
+      }
     }
-  }, []);
+  }, [address, resetState]);
 
   /**
    * Handle chain changes from wallet
@@ -86,9 +102,21 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     const newChainId = parseInt(chainIdHex, 16);
     setChainId(newChainId);
     
-    // Refresh the page on chain change (recommended by MetaMask)
-    window.location.reload();
+    // Re-create provider and signer for new chain
+    if (window.ethereum) {
+      const browserProvider = new BrowserProvider(window.ethereum);
+      setProvider(browserProvider);
+      browserProvider.getSigner().then(setSigner).catch(console.error);
+    }
   }, []);
+
+  /**
+   * Handle disconnect event from wallet
+   */
+  const handleDisconnect = useCallback(() => {
+    console.log("Wallet disconnected unexpectedly");
+    resetState();
+  }, [resetState]);
 
   /**
    * Switch to the required chain
@@ -155,7 +183,12 @@ export function Web3Provider({ children }: Web3ProviderProps) {
 
       // Switch to correct chain if needed
       if (currentChainId !== DEFAULT_CHAIN.chainId) {
-        await switchChain(DEFAULT_CHAIN.chainId);
+        try {
+          await switchChain(DEFAULT_CHAIN.chainId);
+        } catch (switchError: any) {
+          // User rejected chain switch, still continue with connection
+          console.warn("Chain switch failed:", switchError.message);
+        }
       }
 
       // Create provider and signer
@@ -172,25 +205,27 @@ export function Web3Provider({ children }: Web3ProviderProps) {
       localStorage.setItem("walletConnected", "true");
     } catch (err: any) {
       console.error("Connection error:", err);
-      setError(err.message || "Failed to connect wallet");
+      if (err.code === 4001) {
+        setError("Connection rejected. Please approve the connection request.");
+      } else {
+        setError(err.message || "Failed to connect wallet");
+      }
     } finally {
       setIsConnecting(false);
     }
   }, [switchChain]);
 
   /**
-   * Disconnect wallet
+   * Disconnect wallet - clears all state
    */
   const disconnect = useCallback(() => {
-    setAddress(null);
-    setChainId(null);
-    setProvider(null);
-    setSigner(null);
-    localStorage.removeItem("walletConnected");
-  }, []);
+    console.log("Disconnecting wallet...");
+    resetState();
+    setError(null);
+  }, [resetState]);
 
   /**
-   * Setup event listeners and auto-connect
+   * Setup event listeners
    */
   useEffect(() => {
     if (!window.ethereum) return;
@@ -198,18 +233,34 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     // Listen for account changes
     window.ethereum.on("accountsChanged", handleAccountsChanged);
     window.ethereum.on("chainChanged", handleChainChanged);
-
-    // Auto-connect if previously connected
-    const wasConnected = localStorage.getItem("walletConnected");
-    if (wasConnected === "true") {
-      connect();
-    }
+    window.ethereum.on("disconnect", handleDisconnect);
 
     return () => {
       window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
       window.ethereum?.removeListener("chainChanged", handleChainChanged);
+      window.ethereum?.removeListener("disconnect", handleDisconnect);
     };
-  }, [connect, handleAccountsChanged, handleChainChanged]);
+  }, [handleAccountsChanged, handleChainChanged, handleDisconnect]);
+
+  /**
+   * Auto-connect if previously connected
+   */
+  useEffect(() => {
+    if (!window.ethereum) return;
+    
+    const wasConnected = localStorage.getItem("walletConnected");
+    if (wasConnected === "true" && !address && !isConnecting) {
+      // Check if still connected
+      window.ethereum.request({ method: "eth_accounts" }).then((accounts: string[]) => {
+        if (accounts.length > 0) {
+          connect();
+        } else {
+          // Wallet disconnected externally, clear storage
+          localStorage.removeItem("walletConnected");
+        }
+      }).catch(console.error);
+    }
+  }, []); // Run only on mount
 
   const value: Web3ContextType = {
     address,
