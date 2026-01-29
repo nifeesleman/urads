@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useAuth, UserRole } from "@/contexts/AuthContext";
-import { Wallet, Loader2, AlertCircle, User, Building2, Sparkles, ArrowRight, X } from "lucide-react";
+import { Wallet, Loader2, AlertCircle, User, Building2, Sparkles, ArrowRight, X, Lock, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Register = () => {
@@ -19,6 +19,10 @@ const Register = () => {
   const [role, setRole] = useState<UserRole>(defaultRole);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if already authenticated
@@ -47,12 +51,20 @@ const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !password) return;
+    
+    if (password.length < 6) {
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      return;
+    }
 
     setIsSubmitting(true);
     clearAuthError();
     try {
-      await signUp(role, name.trim(), email.trim() || undefined);
+      await signUp(role, name.trim(), password, email.trim() || undefined);
     } finally {
       setIsSubmitting(false);
     }
@@ -225,10 +237,67 @@ const Register = () => {
                 </p>
               </div>
 
+              {/* Password Input */}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-12"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Minimum 6 characters
+                </p>
+              </div>
+
+              {/* Confirm Password Input */}
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm your password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pl-10 pr-10 h-12"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {password && confirmPassword && password !== confirmPassword && (
+                  <p className="text-xs text-destructive">
+                    Passwords do not match
+                  </p>
+                )}
+              </div>
+
               {/* Submit Button */}
               <Button
                 type="submit"
-                disabled={isSubmitting || isLoading || !name.trim()}
+                disabled={isSubmitting || isLoading || !name.trim() || !password || password !== confirmPassword || password.length < 6}
                 className="w-full h-14 text-lg gap-2"
                 size="lg"
               >

@@ -35,7 +35,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   
   // Auth actions
-  signUp: (role: UserRole, name: string, email?: string) => Promise<void>;
+  signUp: (role: UserRole, name: string, password: string, email?: string) => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Sign up with wallet - creates user in Supabase
    * Uses anonymous sign up since we're using wallet as the primary auth method
    */
-  const signUp = useCallback(async (selectedRole: UserRole, name: string, email?: string) => {
+  const signUp = useCallback(async (selectedRole: UserRole, name: string, password: string, email?: string) => {
     if (!address) {
       setError("Please connect your wallet first");
       return;
@@ -155,13 +155,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      // Sign up with a short generated password (wallet is the real auth)
-      // Password must be under 72 chars - use hash of wallet + timestamp
-      const shortPassword = `w${walletLower.slice(2, 10)}${Date.now().toString(36)}`;
-      
+      // Sign up with user-provided password
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: `${walletLower}@wallet.urads.io`,
-        password: shortPassword,
+        email: email || `${walletLower}@wallet.urads.io`,
+        password: password,
         options: {
           emailRedirectTo: window.location.origin,
           data: {
