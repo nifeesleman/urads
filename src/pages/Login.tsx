@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wallet, Loader2, AlertCircle, ArrowRight, X } from "lucide-react";
+import { Wallet, Loader2, AlertCircle, ArrowRight, X, Lock, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
@@ -12,6 +14,8 @@ const Login = () => {
   const { connect, disconnect, isConnected, isConnecting, address, error: web3Error, clearError: clearWeb3Error } = useWeb3();
   const { signIn, user, role, isLoading, error: authError, clearError: clearAuthError } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const from = (location.state as any)?.from?.pathname || "/";
 
@@ -38,14 +42,18 @@ const Login = () => {
   const handleDisconnectWallet = () => {
     clearWeb3Error();
     clearAuthError();
+    setPassword("");
     disconnect();
   };
 
   const handleSignIn = async () => {
+    if (!password) {
+      return;
+    }
     setIsSigningIn(true);
     clearAuthError();
     try {
-      await signIn();
+      await signIn(password);
     } finally {
       setIsSigningIn(false);
     }
@@ -133,10 +141,44 @@ const Login = () => {
                   </div>
                 </div>
 
+                {/* Password Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && password) {
+                          handleSignIn();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Sign In Button */}
                 <Button
                   onClick={handleSignIn}
-                  disabled={isSigningIn || isLoading}
+                  disabled={isSigningIn || isLoading || !password}
                   className="w-full h-14 text-lg gap-2"
                   size="lg"
                 >
