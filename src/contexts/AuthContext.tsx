@@ -36,7 +36,7 @@ export interface AuthContextType {
   
   // Auth actions
   signUp: (role: UserRole, name: string, password: string, email?: string) => Promise<void>;
-  signIn: () => Promise<void>;
+  signIn: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
   
   // Profile actions
@@ -258,12 +258,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [address]);
 
   /**
-   * Sign in with wallet - finds existing user by wallet address
-   * No password needed - wallet ownership is the authentication
+   * Sign in with wallet + password - authenticates with Supabase
    */
-  const signIn = useCallback(async () => {
+  const signIn = useCallback(async (password?: string) => {
     if (!address) {
       setError("Please connect your wallet first");
+      return;
+    }
+
+    if (!password) {
+      setError("Please enter your password");
       return;
     }
 
@@ -273,7 +277,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const walletLower = address.toLowerCase();
       
-      // Check if user exists by wallet address
+      // First, look up the profile to get the email associated with this wallet
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -293,10 +297,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       console.log("Found user profile:", profile.id);
 
-      // Set user state
+      // Get the email from auth.users that matches this profile id
+      // We'll try signing in with the wallet-based email first
+      const walletEmail = `${walletLower}@wallet.urads.io`;
+
+      // Try to sign in with Supabase auth
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: walletEmail,
+        password: password,
+      });
+
+      if (authError) {
+        // If wallet email fails, try with the profile email
+        if (profile.email && profile.email !== walletEmail) {
+          const { error: altAuthError } = await supabase.auth.signInWithPassword({
+            email: profile.email,
+            password: password,
+          });
+          
+          if (altAuthError) {
+            console.error("Auth sign in error:", altAuthError);
+            throw new Error("Invalid password. Please try again.");
+          }
+        } else {
+          console.error("Auth sign in error:", authError);
+          throw new Error("Invalid password. Please try again.");
+        }
+      }
+
+      // Now we're authenticated - fetch the profile and role
       setUser(profile as UserProfile);
 
-      // Fetch role
+      // Fetch role - this should now work because auth.uid() matches
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
@@ -305,16 +337,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (roleError) {
         console.error("Role lookup error:", roleError);
-        throw roleError;
+        // Don't throw - role might not exist
       }
 
       if (roleData) {
         setRole(roleData.role as UserRole);
       } else {
         console.warn("No role found for user");
+        // Try to get role without RLS restriction by profile lookup
+        setRole(null);
       }
 
-      toast.success(`Welcome back, ${profile.name || walletLower.slice(0, 8)}...!`);
+      toast.success(`Welcome back, ${profile.name || walletLower.slice(0, 8)}!`);
     } catch (err: any) {
       console.error("Sign in error:", err);
       setError(err.message);
