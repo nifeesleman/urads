@@ -20,6 +20,7 @@ import { useWeb3 } from "@/contexts/Web3Context";
 import { useEscrow } from "@/hooks/useEscrow";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { CampaignSteps, CampaignStep } from "./CampaignSteps";
+import { AIDescriptionGenerator } from "./AIDescriptionGenerator";
 import { InfluencerSelector } from "./InfluencerSelector";
 import { USDCBalance } from "./USDCBalance";
 import { InfluencerWithProfile } from "@/hooks/useInfluencers";
@@ -323,13 +324,22 @@ export function CreateCampaignForm({ onSuccess }: CreateCampaignFormProps) {
 
               {/* Description */}
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="description">Description</Label>
+                  <AIDescriptionGenerator
+                    title={formData.title}
+                    niches={formData.niche}
+                    budget={formData.budget}
+                    requirements={formData.requirements}
+                    onGenerated={(desc) => setFormData((p) => ({ ...p, description: desc }))}
+                  />
+                </div>
                 <Textarea
                   id="description"
                   placeholder="Describe what you're looking for..."
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                  rows={3}
+                  rows={4}
                 />
               </div>
 

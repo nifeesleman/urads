@@ -1,1 +1,4 @@
 project_id = "kbyljzhvrsdeonaugzjq"
+
+[functions.generate-campaign-description]
+verify_jwt = false
