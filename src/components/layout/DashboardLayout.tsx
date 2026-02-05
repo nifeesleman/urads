@@ -68,6 +68,7 @@ const navigationConfig: Record<UserRole, Array<{ title: string; url: string; ico
   ],
   influencer: [
     { title: "Dashboard", url: "/influencer", icon: LayoutDashboard },
+    { title: "My Profile", url: "/influencer/profile", icon: Users },
     { title: "Campaigns", url: "/influencer/campaigns", icon: Megaphone },
     { title: "My Applications", url: "/influencer/applications", icon: FileText },
     { title: "Messages", url: "/influencer/messages", icon: MessageSquare },

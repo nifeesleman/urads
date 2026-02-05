@@ -28,6 +28,7 @@ import InfluencerCampaigns from "./pages/influencer/InfluencerCampaigns";
 import InfluencerApplications from "./pages/influencer/InfluencerApplications";
 import InfluencerMessages from "./pages/influencer/InfluencerMessages";
 import InfluencerEarnings from "./pages/influencer/InfluencerEarnings";
+import InfluencerProfile from "./pages/influencer/InfluencerProfile";
 
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminCampaigns from "./pages/admin/AdminCampaigns";
@@ -129,6 +130,14 @@ const App = () => (
                 element={
                   <ProtectedRoute requiredRole="influencer">
                     <InfluencerEarnings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/influencer/profile"
+                element={
+                  <ProtectedRoute requiredRole="influencer">
+                    <InfluencerProfile />
                   </ProtectedRoute>
                 }
               />
