@@ -10,7 +10,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { ProfileCompletionCard } from "@/components/influencer/ProfileCompletionCard";
+import { useProfileCompletion } from "@/hooks/useProfileCompletion";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -46,6 +47,7 @@ interface DashboardStats {
 
 export default function InfluencerDashboard() {
   const { user } = useAuth();
+  const { fields: profileFields, isLoading: profileLoading } = useProfileCompletion(user?.id);
   const [availableCampaigns, setAvailableCampaigns] = useState<AvailableCampaign[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     totalEarnings: 0,
@@ -109,6 +111,9 @@ export default function InfluencerDashboard() {
             </Button>
           </Link>
         </div>
+
+        {/* Profile Completion */}
+        <ProfileCompletionCard fields={profileFields} isLoading={profileLoading} />
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
