@@ -336,7 +336,7 @@ export function CreateCampaignForm({ onSuccess }: CreateCampaignFormProps) {
                 </div>
                 <Textarea
                   id="description"
-                  placeholder="Describe your brand, campaign goals, content type needed, deliverables, and target audience..."
+                  placeholder="Describe your brand, goals, content needed, deliverables, and audience..."
                   value={formData.description}
                   onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                   rows={4}
