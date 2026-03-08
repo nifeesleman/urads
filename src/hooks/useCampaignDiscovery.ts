@@ -105,13 +105,9 @@ export function useCampaignDiscovery() {
       const advertiserIds = [...new Set(data.map(c => c.advertiser_id))];
       
       const { data: advertisers } = await supabase
-        .from("advertisers")
-        .select(`
-          id,
-          company_name,
-          user_id
-        `)
-        .in("id", advertiserIds);
+        .from("public_advertisers" as any)
+        .select("id, company_name, user_id")
+        .in("id", advertiserIds) as { data: { id: string; company_name: string | null; user_id: string }[] | null };
 
       // Fetch profile info for advertisers
       const userIds = advertisers?.map(a => a.user_id) || [];
