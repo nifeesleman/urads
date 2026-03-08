@@ -76,7 +76,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Exchange a magic link token for a Supabase session
    */
-  const exchangeToken = useCallback(async (tokenHash: string, email: string) => {
+  const exchangeToken = useCallback(async (tokenHash: string, _email: string) => {
     const { error: verifyError } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: "magiclink",
