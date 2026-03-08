@@ -105,7 +105,7 @@ export function useCampaignDiscovery() {
       const advertiserIds = [...new Set(data.map(c => c.advertiser_id))];
       
       const { data: advertisers } = await supabase
-        .from("advertisers")
+        .from("public_advertisers" as any)
         .select(`
           id,
           company_name,
