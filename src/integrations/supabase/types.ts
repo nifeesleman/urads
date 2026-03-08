@@ -164,6 +164,13 @@ export type Database = {
             referencedRelation: "advertisers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaigns_advertiser_id_fkey"
+            columns: ["advertiser_id"]
+            isOneToOne: false
+            referencedRelation: "public_advertisers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       escrow: {
@@ -449,6 +456,39 @@ export type Database = {
       }
     }
     Views: {
+      public_advertisers: {
+        Row: {
+          company_name: string | null
+          id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advertisers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
