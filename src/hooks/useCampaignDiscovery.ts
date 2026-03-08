@@ -116,7 +116,7 @@ export function useCampaignDiscovery() {
       // Fetch profile info for advertisers
       const userIds = advertisers?.map(a => a.user_id) || [];
       const { data: profiles } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, name, avatar_url, verified")
         .in("id", userIds);
 
