@@ -79,7 +79,7 @@ export function useConversations() {
 
       // Fetch partner profiles
       const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
+        .from("public_profiles")
         .select("id, name, avatar_url")
         .in("id", Array.from(partnerIds));
 
