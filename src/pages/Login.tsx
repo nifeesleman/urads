@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useWeb3 } from "@/contexts/Web3Context";
 import { useAuth } from "@/contexts/AuthContext";
-import { Wallet, Loader2, AlertCircle, ArrowRight, X, Lock, Eye, EyeOff } from "lucide-react";
+import { Wallet, Loader2, AlertCircle, ArrowRight, X, Fingerprint } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
@@ -14,18 +12,16 @@ const Login = () => {
   const { connect, disconnect, isConnected, isConnecting, address, error: web3Error, clearError: clearWeb3Error } = useWeb3();
   const { signIn, user, role, isLoading, error: authError, clearError: clearAuthError } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   const from = (location.state as any)?.from?.pathname || "/";
 
   // Redirect if already authenticated
   useEffect(() => {
     if (user && role && isConnected) {
-      const redirectPath = role === "advertiser" 
-        ? "/advertiser" 
-        : role === "influencer" 
-          ? "/influencer" 
+      const redirectPath = role === "advertiser"
+        ? "/advertiser"
+        : role === "influencer"
+          ? "/influencer"
           : role === "admin"
             ? "/admin"
             : from;
@@ -42,18 +38,14 @@ const Login = () => {
   const handleDisconnectWallet = () => {
     clearWeb3Error();
     clearAuthError();
-    setPassword("");
     disconnect();
   };
 
   const handleSignIn = async () => {
-    if (!password) {
-      return;
-    }
     setIsSigningIn(true);
     clearAuthError();
     try {
-      await signIn(password);
+      await signIn();
     } finally {
       setIsSigningIn(false);
     }
@@ -80,7 +72,7 @@ const Login = () => {
               Welcome back
             </h1>
             <p className="text-muted-foreground">
-              Connect your wallet to sign in to your account
+              Connect your wallet and sign a message to verify your identity
             </p>
           </div>
 
@@ -141,55 +133,31 @@ const Login = () => {
                   </div>
                 </div>
 
-                {/* Password Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && password) {
-                          handleSignIn();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
+                {/* Info about signature */}
+                <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                  <div className="flex items-start gap-2">
+                    <Fingerprint className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      You'll be asked to sign a message with your wallet. This proves ownership without sharing any private keys.
+                    </p>
                   </div>
                 </div>
 
                 {/* Sign In Button */}
                 <Button
                   onClick={handleSignIn}
-                  disabled={isSigningIn || isLoading || !password}
+                  disabled={isSigningIn || isLoading}
                   className="w-full h-14 text-lg gap-2"
                   size="lg"
                 >
                   {isSigningIn || isLoading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Signing in...
+                      Verifying Signature...
                     </>
                   ) : (
                     <>
-                      Sign In
+                      Sign In with Wallet
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -205,29 +173,24 @@ const Login = () => {
             </div>
             <div className="relative flex justify-center text-sm">
               <span className="bg-background px-4 text-muted-foreground">
-                or
+                supported wallets
               </span>
             </div>
           </div>
 
           {/* Wallet Options */}
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground text-center mb-4">
-              We support the following wallets:
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-4 rounded-lg border border-border text-center">
-                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 flex items-center justify-center">
-                  <span className="text-orange-500 text-xl">🦊</span>
-                </div>
-                <p className="text-sm font-medium text-foreground">MetaMask</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-4 rounded-lg border border-border text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <span className="text-xl">🦊</span>
               </div>
-              <div className="p-4 rounded-lg border border-border text-center">
-                <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <span className="text-blue-500 text-xl">🔗</span>
-                </div>
-                <p className="text-sm font-medium text-foreground">WalletConnect</p>
+              <p className="text-sm font-medium text-foreground">MetaMask</p>
+            </div>
+            <div className="p-4 rounded-lg border border-border text-center">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <span className="text-xl">🔗</span>
               </div>
+              <p className="text-sm font-medium text-foreground">WalletConnect</p>
             </div>
           </div>
 
